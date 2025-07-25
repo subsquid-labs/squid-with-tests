@@ -22,27 +22,7 @@ export const CONTRACT_ADDRESS = assertNotNull(
 )
 
 // First we configure data retrieval.
-
 const processorBillet = new EvmBatchProcessor()
-
-// SQD Network gateways are the primary source of blockchain data in
-// squids, providing pre-filtered data in chunks of roughly 1-10k blocks.
-// Set this for a fast sync.
-// Keeping this optional for tests.
-if (process.env.ETHEREUM_SQD_GATEWAY) {
-  processorBillet.setGateway(process.env.ETHEREUM_SQD_GATEWAY)
-}
-
-// Another data source squid processors can use is chain RPC.
-// In this particular squid it is used to retrieve the very latest chain data
-// (including unfinalized blocks) in real time. It can also be used to
-//   - make direct RPC queries to get extra data during indexing
-//   - sync a squid without a gateway (slow)
-processorBillet
-  .setRpcEndpoint(assertNotNull(
-    process.env.ETHEREUM_RPC,
-    'ETHEREUM_RPC is not set'
-  ))
   // The processor needs to know how many newest blocks it should mark as "hot".
   // If it detects a blockchain fork, it will roll back any changes to the
   // database made due to orphaned blocks, then re-run the processing for the
@@ -73,6 +53,24 @@ processorBillet
       transactionHash: true,
     },
   })
+
+// SQD Network gateways are the primary source of blockchain data in
+// squids, providing pre-filtered data in chunks of roughly 1-10k blocks.
+// Set this for a fast sync.
+// Keeping this optional for tests.
+if (process.env.ETHEREUM_SQD_GATEWAY) {
+  processorBillet.setGateway(process.env.ETHEREUM_SQD_GATEWAY)
+}
+
+// Another data source squid processors can use is chain RPC.
+// In this particular squid it is used to retrieve the very latest chain data
+// (including unfinalized blocks) in real time. It can also be used to
+//   - make direct RPC queries to get extra data during indexing
+//   - sync a squid without a gateway (slow)
+processorBillet.setRpcEndpoint(assertNotNull(
+  process.env.ETHEREUM_RPC,
+  'ETHEREUM_RPC is not set'
+))
 
 export const processor = processorBillet
 
