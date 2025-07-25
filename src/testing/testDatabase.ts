@@ -42,7 +42,7 @@ export async function setupTestDatabase() : Promise<{
     username: PG_CONFIG.user,
     password: PG_CONFIG.password,
     database: dbName,
-    entities: [Account, Transfer],
+    entities: [__dirname + '/../model/generated/*.model.{ts,js}'],
     synchronize: false,
     logging: false,
   })
