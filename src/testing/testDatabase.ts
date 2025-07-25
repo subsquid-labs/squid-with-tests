@@ -1,7 +1,5 @@
 import { Pool } from 'pg'
 import { DataSource } from 'typeorm'
-import { Account } from '../model/generated/account.model'
-import { Transfer } from '../model/generated/transfer.model'
 
 // Helper to generate a random DB name
 export function randomDbName() {
@@ -16,10 +14,6 @@ export const PG_CONFIG = {
   password: process.env.DB_PASS || 'postgres',
 }
 
-// Migration script
-const MigrationClass = require('../../db/migrations/1753441806659-Data.js')
-const migration = new MigrationClass()
-
 export async function setupTestDatabase() : Promise<{
   dataSource: DataSource
   cleanup: () => Promise<void>
@@ -31,7 +25,6 @@ export async function setupTestDatabase() : Promise<{
 
   // Connect to the new test DB
   const testPool = new Pool({ ...PG_CONFIG, database: dbName })
-  await migration.up(testPool)
   await testPool.end()
 
   // Set up TypeORM DataSource
@@ -43,10 +36,12 @@ export async function setupTestDatabase() : Promise<{
     password: PG_CONFIG.password,
     database: dbName,
     entities: [__dirname + '/../model/generated/*.model.{ts,js}'],
+    migrations: [__dirname + '/../../db/migrations/*.js'],
     synchronize: false,
     logging: false,
   })
   await dataSource.initialize()
+  await dataSource.runMigrations()
 
   async function cleanup() {
     await dataSource.destroy()
