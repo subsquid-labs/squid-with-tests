@@ -10,7 +10,7 @@ describe('handleTransfers integration', () => {
   beforeAll(async () => {
     const db = await setupTestDatabase()
     store = new Store(() => db.dataSource.manager)
-  })
+  }, 30000)
 
   afterAll(async () => {
     await db.cleanup()
