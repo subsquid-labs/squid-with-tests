@@ -3,26 +3,25 @@ import { Transaction, weieth, weigwei } from 'micro-eth-signer'
 import { createContract } from 'micro-eth-signer/abi/index.js'
 import { mytokenabi } from './mytokenabi'
 import { 
-  DEPLOYER_PRIVATE_KEY, 
-  ALICE_PRIVATE_KEY, 
-  BOB_PRIVATE_KEY,
-  CONTRACT_ADDRESS 
+  participants,
+  CONTRACT_ADDRESS,
+  CHAIN_ID
 } from './constants'
 
 // Configuration
 const maxPriorityFeePerGas = weigwei.decode('0.1')
 const maxFeePerGas = weigwei.decode('1.0')
 const gasLimit = 11000000n
-const chainId = 31337n
+const chainId = BigInt(CHAIN_ID)
 
 // RPC endpoint (assuming local Anvil instance)
 const RPC_URL = process.env.ANVIL_RPC_URL || 'http://localhost:8545'
 
 // Account mapping
 const ACCOUNT_KEYS = {
-  Deployer: DEPLOYER_PRIVATE_KEY,
-  Alice: ALICE_PRIVATE_KEY,
-  Bob: BOB_PRIVATE_KEY,
+  Deployer: participants.deployer.privateKey,
+  Alice: participants.alice.privateKey,
+  Bob: participants.bob.privateKey,
 } as const
 
 // Contract instance
@@ -98,12 +97,12 @@ function getPrivateKey(who: 'Deployer' | 'Alice' | 'Bob'): string {
 
 // Get address from private key
 function getAddress(privateKey: string): string {
-  // This is a simplified version - in a real implementation you'd derive the address
-  // For now, we'll use the known addresses from constants
-  if (privateKey === DEPLOYER_PRIVATE_KEY) return '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266'
-  if (privateKey === ALICE_PRIVATE_KEY) return '0x70997970C51812dc3A010C7d01b50e0d17dc79C8'
-  if (privateKey === BOB_PRIVATE_KEY) return '0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC'
-  throw new Error('Unknown private key')
+  // Find the participant with the matching private key
+  const participant = Object.values(participants).find(p => p.privateKey === privateKey)
+  if (!participant) {
+    throw new Error('Unknown private key')
+  }
+  return participant.address
 }
 
 export async function sendAnvilTransaction<T extends ContractMethod>(
