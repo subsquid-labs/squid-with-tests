@@ -278,6 +278,42 @@ function decodeString(hex: string): string {
   return Buffer.from(hexWithoutPrefix, 'hex').toString('utf8').replace(/\0/g, '')
 }
 
+// Get current block number from Anvil
+export async function getCurrentBlockNumber(): Promise<number> {
+  try {
+    const response = await axios.post(RPC_URL, {
+      jsonrpc: '2.0',
+      method: 'eth_blockNumber',
+      params: [],
+      id: 1
+    })
+    
+    if (response.data.error) {
+      throw new Error(`RPC Error: ${response.data.error.message}`)
+    }
+    
+    return parseInt(response.data.result, 16)
+  } catch (error) {
+    console.error('Failed to get block number:', error)
+    throw error
+  }
+}
+
+// Wait for a specific block number
+export async function waitForBlock(blockNumber: number, timeoutMs: number = 30000): Promise<void> {
+  const startTime = Date.now()
+  
+  while (Date.now() - startTime < timeoutMs) {
+    const currentBlock = await getCurrentBlockNumber()
+    if (currentBlock >= blockNumber) {
+      return
+    }
+    await new Promise(resolve => setTimeout(resolve, 1000))
+  }
+  
+  throw new Error(`Timeout waiting for block ${blockNumber}`)
+}
+
 // Helper function to convert ETH to Wei
 export function ethToWei(eth: string): bigint {
   return weieth.decode(eth)
