@@ -3,12 +3,12 @@ concurrency: 1
 on:
   pull_request:
     branches:
-      - develop
-      - main
-    paths:
-      - .github/workflows/test.yml
-      - packages/core/**
-
+      - master
+#    paths:
+#			- **
+#      - .github/workflows/run_tests.yml
+#      - packages/core/**
+  workflow_dispatch:
 jobs:
   setup-build-publish-deploy:
     name: Run tests
