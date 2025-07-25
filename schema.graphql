@@ -1,0 +1,13 @@
+type Transfer @entity {
+  id: ID!
+  block: Int!
+  from: String! @index
+  to: String! @index
+  value: BigInt!
+  txnHash: String! @index
+}
+
+type Account @entity {
+  id: ID!
+  balance: BigInt!
+}
