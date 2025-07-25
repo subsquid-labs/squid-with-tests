@@ -36,6 +36,15 @@ type ContractMethod =
   | 'transferFrom'
   | 'burn'
 
+// Type for read-only contract methods
+type ReadOnlyMethod = 
+  | 'balanceOf'
+  | 'allowance'
+  | 'decimals'
+  | 'name'
+  | 'symbol'
+  | 'totalSupply'
+
 // Type for method arguments
 type MethodArgs = {
   mint: { to: string; amount: bigint }
@@ -43,6 +52,16 @@ type MethodArgs = {
   approve: { spender: string; value: bigint }
   transferFrom: { from: string; to: string; value: bigint }
   burn: { form: string; amount: bigint }
+}
+
+// Type for read-only method arguments
+type ReadOnlyMethodArgs = {
+  balanceOf: { account: string }
+  allowance: { owner: string; spender: string }
+  decimals: {}
+  name: {}
+  symbol: {}
+  totalSupply: {}
 }
 
 // Get nonce for an account
@@ -83,6 +102,30 @@ async function sendRawTransaction(signedTxHex: string): Promise<string> {
     return response.data.result
   } catch (error) {
     console.error('Failed to send transaction:', error)
+    throw error
+  }
+}
+
+// Call read-only contract method
+async function callContractMethod(data: string): Promise<string> {
+  try {
+    const response = await axios.post(RPC_URL, {
+      jsonrpc: '2.0',
+      method: 'eth_call',
+      params: [{
+        to: CONTRACT_ADDRESS,
+        data: data
+      }, 'latest'],
+      id: 1
+    })
+    
+    if (response.data.error) {
+      throw new Error(`RPC Error: ${response.data.error.message}`)
+    }
+    
+    return response.data.result
+  } catch (error) {
+    console.error('Failed to call contract method:', error)
     throw error
   }
 }
@@ -163,6 +206,76 @@ export async function sendAnvilTransaction<T extends ContractMethod>(
   console.log(`To: ${CONTRACT_ADDRESS}`)
   
   return txHash
+}
+
+export async function callAnvilReadOnly<T extends ReadOnlyMethod>(
+  what: T,
+  args: ReadOnlyMethodArgs[T]
+): Promise<any> {
+  // Encode the contract method call
+  let encodedData: string
+  
+  switch (what) {
+    case 'balanceOf':
+      encodedData = myTokenContract.balanceOf.encodeInput(args as ReadOnlyMethodArgs['balanceOf'])
+      break
+    case 'allowance':
+      encodedData = myTokenContract.allowance.encodeInput(args as ReadOnlyMethodArgs['allowance'])
+      break
+    case 'decimals':
+      encodedData = myTokenContract.decimals.encodeInput(args as ReadOnlyMethodArgs['decimals'])
+      break
+    case 'name':
+      encodedData = myTokenContract.name.encodeInput(args as ReadOnlyMethodArgs['name'])
+      break
+    case 'symbol':
+      encodedData = myTokenContract.symbol.encodeInput(args as ReadOnlyMethodArgs['symbol'])
+      break
+    case 'totalSupply':
+      encodedData = myTokenContract.totalSupply.encodeInput(args as ReadOnlyMethodArgs['totalSupply'])
+      break
+    default:
+      throw new Error(`Unknown read-only method: ${what}`)
+  }
+  
+  // Call the contract method
+  const result = await callContractMethod(encodedData)
+  
+  // Decode the result based on the method
+  let decodedResult: any
+  
+  switch (what) {
+    case 'balanceOf':
+    case 'totalSupply':
+      decodedResult = BigInt(result)
+      break
+    case 'allowance':
+      decodedResult = BigInt(result)
+      break
+    case 'decimals':
+      decodedResult = parseInt(result, 16)
+      break
+    case 'name':
+    case 'symbol':
+      // For string returns, we need to decode the hex
+      decodedResult = decodeString(result)
+      break
+    default:
+      decodedResult = result
+  }
+  
+  console.log(`Read-only call: ${what}`)
+  console.log(`Result: ${decodedResult}`)
+  
+  return decodedResult
+}
+
+// Helper function to decode string from hex
+function decodeString(hex: string): string {
+  // Remove '0x' prefix and decode
+  const hexWithoutPrefix = hex.startsWith('0x') ? hex.slice(2) : hex
+  // Convert hex to string
+  return Buffer.from(hexWithoutPrefix, 'hex').toString('utf8').replace(/\0/g, '')
 }
 
 // Helper function to convert ETH to Wei
