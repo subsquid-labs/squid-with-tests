@@ -1,6 +1,5 @@
 import axios from 'axios'
-import { Transaction, weieth, weigwei } from 'micro-eth-signer'
-import { createContract } from 'micro-eth-signer/abi/index.js'
+import { ethers } from 'ethers'
 import { mytokenabi } from './mytokenabi'
 import { 
   participants,
@@ -10,8 +9,8 @@ import {
 } from './constants'
 
 // Configuration
-const maxPriorityFeePerGas = weigwei.decode('0.1')
-const maxFeePerGas = weigwei.decode('1.0')
+const maxPriorityFeePerGas = ethers.parseUnits('0.1', 'gwei')
+const maxFeePerGas = ethers.parseUnits('1.0', 'gwei')
 const gasLimit = 11000000n
 const chainId = BigInt(CHAIN_ID)
 
@@ -25,8 +24,9 @@ const ACCOUNT_KEYS = {
   Bob: participants.bob.privateKey,
 } as const
 
-// Contract instance
-const myTokenContract = createContract(mytokenabi) as any
+// Provider and contract instance
+const provider = new ethers.JsonRpcProvider(RPC_URL)
+const myTokenContract = new ethers.Contract(CONTRACT_ADDRESS, mytokenabi, provider) as any
 
 // Type for contract methods
 type ContractMethod = 
@@ -64,72 +64,6 @@ type ReadOnlyMethodArgs = {
   totalSupply: {}
 }
 
-// Get nonce for an account
-async function getNonce(address: string): Promise<bigint> {
-  try {
-    const response = await axios.post(RPC_URL, {
-      jsonrpc: '2.0',
-      method: 'eth_getTransactionCount',
-      params: [address, 'latest'],
-      id: 1
-    })
-    
-    if (response.data.error) {
-      throw new Error(`RPC Error: ${response.data.error.message}`)
-    }
-    
-    return BigInt(response.data.result)
-  } catch (error) {
-    console.error('Failed to get nonce:', error)
-    throw error
-  }
-}
-
-// Send raw transaction
-async function sendRawTransaction(signedTxHex: string): Promise<string> {
-  try {
-    const response = await axios.post(RPC_URL, {
-      jsonrpc: '2.0',
-      method: 'eth_sendRawTransaction',
-      params: [signedTxHex],
-      id: 1
-    })
-    
-    if (response.data.error) {
-      throw new Error(`RPC Error: ${response.data.error.message}`)
-    }
-    
-    return response.data.result
-  } catch (error) {
-    console.error('Failed to send transaction:', error)
-    throw error
-  }
-}
-
-// Call read-only contract method
-async function callContractMethod(data: string): Promise<string> {
-  try {
-    const response = await axios.post(RPC_URL, {
-      jsonrpc: '2.0',
-      method: 'eth_call',
-      params: [{
-        to: CONTRACT_ADDRESS,
-        data: data
-      }, 'latest'],
-      id: 1
-    })
-    
-    if (response.data.error) {
-      throw new Error(`RPC Error: ${response.data.error.message}`)
-    }
-    
-    return response.data.result
-  } catch (error) {
-    console.error('Failed to call contract method:', error)
-    throw error
-  }
-}
-
 // Get private key from account name
 function getPrivateKey(who: 'Deployer' | 'Alice' | 'Bob'): string {
   const privateKey = ACCOUNT_KEYS[who]
@@ -155,144 +89,142 @@ export async function sendAnvilTransaction<T extends ContractMethod>(
   args: MethodArgs[T]
 ): Promise<string> {
   const privateKey = getPrivateKey(who)
-  const fromAddress = getAddress(privateKey)
-  const nonce = await getNonce(fromAddress)
   
-  // Encode the contract method call
-  let encodedData: string
+  // Create a fresh provider and wallet for each transaction
+  const freshProvider = new ethers.JsonRpcProvider(RPC_URL)
+  const wallet = new ethers.Wallet(privateKey, freshProvider)
+  const freshContract = new ethers.Contract(CONTRACT_ADDRESS, mytokenabi, freshProvider) as any
+  const contractWithSigner = freshContract.connect(wallet)
+  
+  let tx: ethers.ContractTransactionResponse
   
   switch (what) {
-    case 'mint':
-      encodedData = myTokenContract.mint.encodeInput(args as MethodArgs['mint'])
+    case 'mint': {
+      const mintArgs = args as MethodArgs['mint']
+      tx = await contractWithSigner.mint(
+        mintArgs.to,
+        mintArgs.amount,
+        {
+          maxPriorityFeePerGas,
+          maxFeePerGas,
+          gasLimit
+        }
+      )
       break
-    case 'transfer':
-      encodedData = myTokenContract.transfer.encodeInput(args as MethodArgs['transfer'])
+    }
+    case 'transfer': {
+      const transferArgs = args as MethodArgs['transfer']
+      tx = await contractWithSigner.transfer(
+        transferArgs.to,
+        transferArgs.value,
+        {
+          maxPriorityFeePerGas,
+          maxFeePerGas,
+          gasLimit
+        }
+      )
       break
-    case 'approve':
-      encodedData = myTokenContract.approve.encodeInput(args as MethodArgs['approve'])
+    }
+    case 'approve': {
+      const approveArgs = args as MethodArgs['approve']
+      tx = await contractWithSigner.approve(
+        approveArgs.spender,
+        approveArgs.value,
+        {
+          maxPriorityFeePerGas,
+          maxFeePerGas,
+          gasLimit
+        }
+      )
       break
-    case 'transferFrom':
-      encodedData = myTokenContract.transferFrom.encodeInput(args as MethodArgs['transferFrom'])
+    }
+    case 'transferFrom': {
+      const transferFromArgs = args as MethodArgs['transferFrom']
+      tx = await contractWithSigner.transferFrom(
+        transferFromArgs.from,
+        transferFromArgs.to,
+        transferFromArgs.value,
+        {
+          maxPriorityFeePerGas,
+          maxFeePerGas,
+          gasLimit
+        }
+      )
       break
-    case 'burn':
-      encodedData = myTokenContract.burn.encodeInput(args as MethodArgs['burn'])
+    }
+    case 'burn': {
+      const burnArgs = args as MethodArgs['burn']
+      tx = await contractWithSigner.burn(
+        burnArgs.form,
+        burnArgs.amount,
+        {
+          maxPriorityFeePerGas,
+          maxFeePerGas,
+          gasLimit
+        }
+      )
       break
+    }
     default:
       throw new Error(`Unknown method: ${what}`)
   }
   
-  // Prepare unsigned transaction
-  const unsignedTx = Transaction.prepare({
-    to: CONTRACT_ADDRESS,
-    maxPriorityFeePerGas,
-    maxFeePerGas,
-    value: 0n,
-    nonce,
-    chainId,
-    gasLimit,
-    data: Buffer.from(encodedData).toString('hex')
-  })
-  
-  // Sign the transaction
-  const signedTx = unsignedTx.signBy(privateKey)
-  const signedTxHex = signedTx.toHex()
-  
-  // Send the transaction
-  const txHash = await sendRawTransaction(signedTxHex)
-  
-  console.log(`Transaction sent: ${txHash}`)
+  console.log(`Transaction sent: ${tx.hash}`)
   console.log(`Method: ${what}`)
-  console.log(`From: ${who} (${fromAddress})`)
+  console.log(`From: ${who} (${wallet.address})`)
   console.log(`To: ${CONTRACT_ADDRESS}`)
   
-  return txHash
+  // Wait for the transaction to be mined to ensure nonce is updated
+  await tx.wait()
+  console.log(`Transaction confirmed: ${tx.hash}`)
+  
+  return tx.hash
 }
 
 export async function callAnvilReadOnly<T extends ReadOnlyMethod>(
   what: T,
   args: ReadOnlyMethodArgs[T]
 ): Promise<any> {
-  // Encode the contract method call
-  let encodedData: string
+  let result: any
   
   switch (what) {
-    case 'balanceOf':
-      encodedData = myTokenContract.balanceOf.encodeInput(args as ReadOnlyMethodArgs['balanceOf'])
+    case 'balanceOf': {
+      const balanceArgs = args as ReadOnlyMethodArgs['balanceOf']
+      result = await myTokenContract.balanceOf(balanceArgs.account)
       break
-    case 'allowance':
-      encodedData = myTokenContract.allowance.encodeInput(args as ReadOnlyMethodArgs['allowance'])
+    }
+    case 'allowance': {
+      const allowanceArgs = args as ReadOnlyMethodArgs['allowance']
+      result = await myTokenContract.allowance(allowanceArgs.owner, allowanceArgs.spender)
       break
+    }
     case 'decimals':
-      encodedData = myTokenContract.decimals.encodeInput(args as ReadOnlyMethodArgs['decimals'])
+      result = await myTokenContract.decimals()
       break
     case 'name':
-      encodedData = myTokenContract.name.encodeInput(args as ReadOnlyMethodArgs['name'])
+      result = await myTokenContract.name()
       break
     case 'symbol':
-      encodedData = myTokenContract.symbol.encodeInput(args as ReadOnlyMethodArgs['symbol'])
+      result = await myTokenContract.symbol()
       break
     case 'totalSupply':
-      encodedData = myTokenContract.totalSupply.encodeInput(args as ReadOnlyMethodArgs['totalSupply'])
+      result = await myTokenContract.totalSupply()
       break
     default:
       throw new Error(`Unknown read-only method: ${what}`)
   }
   
-  // Call the contract method
-  const result = await callContractMethod(encodedData)
-  
-  // Decode the result based on the method
-  let decodedResult: any
-  
-  switch (what) {
-    case 'balanceOf':
-    case 'totalSupply':
-      decodedResult = BigInt(result)
-      break
-    case 'allowance':
-      decodedResult = BigInt(result)
-      break
-    case 'decimals':
-      decodedResult = parseInt(result, 16)
-      break
-    case 'name':
-    case 'symbol':
-      // For string returns, we need to decode the hex
-      decodedResult = decodeString(result)
-      break
-    default:
-      decodedResult = result
-  }
-  
   console.log(`Read-only call: ${what}`)
-  console.log(`Result: ${decodedResult}`)
+  console.log(`Result: ${result}`)
   
-  return decodedResult
-}
-
-// Helper function to decode string from hex
-function decodeString(hex: string): string {
-  // Remove '0x' prefix and decode
-  const hexWithoutPrefix = hex.startsWith('0x') ? hex.slice(2) : hex
-  // Convert hex to string
-  return Buffer.from(hexWithoutPrefix, 'hex').toString('utf8').replace(/\0/g, '')
+  return result
 }
 
 // Get current block number from Anvil
 export async function getCurrentBlockNumber(): Promise<number> {
   try {
-    const response = await axios.post(RPC_URL, {
-      jsonrpc: '2.0',
-      method: 'eth_blockNumber',
-      params: [],
-      id: 1
-    })
-    
-    if (response.data.error) {
-      throw new Error(`RPC Error: ${response.data.error.message}`)
-    }
-    
-    return parseInt(response.data.result, 16)
+    const blockNumber = await provider.getBlockNumber()
+    return blockNumber
   } catch (error) {
     console.error('Failed to get block number:', error)
     throw error
@@ -316,12 +248,12 @@ export async function waitForBlock(blockNumber: number, timeoutMs: number = 3000
 
 // Helper function to convert ETH to Wei
 export function ethToWei(eth: string): bigint {
-  return weieth.decode(eth)
+  return ethers.parseEther(eth)
 }
 
 // Helper function to convert Wei to ETH
 export function weiToEth(wei: bigint): string {
-  return weieth.encode(wei)
+  return ethers.formatEther(wei)
 }
 
 // Load Anvil state without arguments (uses default state file)
