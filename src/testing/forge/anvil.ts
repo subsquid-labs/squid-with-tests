@@ -5,7 +5,8 @@ import { mytokenabi } from './mytokenabi'
 import { 
   participants,
   CONTRACT_ADDRESS,
-  CHAIN_ID
+  CHAIN_ID,
+  hexState
 } from './constants'
 
 // Configuration
@@ -172,4 +173,29 @@ export function ethToWei(eth: string): bigint {
 // Helper function to convert Wei to ETH
 export function weiToEth(wei: bigint): string {
   return weieth.encode(wei)
+}
+
+// Load Anvil state without arguments (uses default state file)
+export async function loadAnvilState(hexState: string): Promise<void> {
+  try {
+    const response = await axios.post(RPC_URL, {
+      jsonrpc: '2.0',
+      method: 'anvil_loadState',
+      params: [hexState],
+      id: 1
+    })
+    
+    if (response.data.error) {
+      throw new Error(`RPC Error: ${response.data.error.message}`)
+    }
+    
+    console.log('Anvil state loaded successfully')
+  } catch (error) {
+    console.error('Failed to load Anvil state:', error)
+    throw error
+  }
 } 
+
+export async function restoreStandardState(): Promise<void> {
+  await loadAnvilState(hexState)
+}

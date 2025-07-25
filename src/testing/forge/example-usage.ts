@@ -1,4 +1,4 @@
-import { sendAnvilTransaction, ethToWei } from './sendAnvilTransaction'
+import { sendAnvilTransaction, ethToWei } from './anvil'
 
 // Example usage of the sendAnvilTransaction function
 async function exampleUsage() {
