@@ -8,3 +8,11 @@ services:
       - "${DB_PORT}:5432"
       # command: ["postgres", "-c", "log_statement=all"]
     shm_size: 1gb
+  anvil:
+    image: ghcr.io/foundry-rs/foundry
+    environment:
+      ANVIL_IP_ADDR: "0.0.0.0"
+    working_dir: /anvil
+    ports:
+      - "8545:8545"
+    command: anvil
