@@ -8,9 +8,9 @@ describe('handleTransfers integration', () => {
   let store: Store
 
   beforeAll(async () => {
-    const db = await setupTestDatabase()
+    db = await setupTestDatabase()
     store = new Store(() => db.dataSource.manager)
-  }, 30000)
+  })
 
   afterAll(async () => {
     await db.cleanup()
