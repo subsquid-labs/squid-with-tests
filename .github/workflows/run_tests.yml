@@ -4,10 +4,10 @@ on:
   pull_request:
     branches:
       - master
+      - feat/anvil-e2e
 #    paths:
-#			- **
 #      - .github/workflows/run_tests.yml
-#      - packages/core/**
+#      - src/**
   workflow_dispatch:
 jobs:
   setup-build-publish-deploy:
@@ -21,6 +21,14 @@ jobs:
           POSTGRES_PASSWORD: postgres
         ports:
           - 23798:5432
+      anvil:
+        image: ghcr.io/foundry-rs/foundry
+        environment:
+          ANVIL_IP_ADDR: "0.0.0.0"
+        working_dir: /anvil
+        ports:
+          - "8545:8545"
+        command: anvil
     steps:
 #      - name: cancel previous runs
 #        uses: styfle/cancel-workflow-action@0.5.0
@@ -35,7 +43,3 @@ jobs:
 
       - name: Run tests
         run: npm test
-#        env:
-#          TEST_CLICKHOUSE_URL: http://localhost:10123
-#          TEST_CLICKHOUSE_USERNAME: default
-#          TEST_CLICKHOUSE_PASSWORD:
