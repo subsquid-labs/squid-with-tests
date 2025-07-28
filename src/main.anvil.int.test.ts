@@ -23,6 +23,10 @@ function runIndexer(dbName: string, toBlock: number): ChildProcess {
     ETHEREUM_RPC: ANVIL_RPC_URL,
     START_BLOCK: '1',
     END_BLOCK: toBlock.toString(),
+    // The indexer will wait for chain updates forever if it comes to within
+    // FINALITY_CONFIRMATION blocks of the chain head. Since we want to index
+    // the whole chain history and exit, it must be set to zero.
+    FINALITY_CONFIRMATION: '0',
     // Disable SQD gateway for local testing
     ETHEREUM_SQD_GATEWAY: ''
   }
@@ -211,4 +215,4 @@ describe('Anvil Integration Test', () => {
       expect(BigInt(bobAccount.balance)).toBe(currentBobBalance)
     }
   }, 60000) // 60 second timeout for integration test
-}) 
+})

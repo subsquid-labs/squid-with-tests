@@ -27,7 +27,7 @@ const processorBillet = new EvmBatchProcessor()
   // If it detects a blockchain fork, it will roll back any changes to the
   // database made due to orphaned blocks, then re-run the processing for the
   // main chain blocks.
-  .setFinalityConfirmation(75)
+  .setFinalityConfirmation(parseInt(assertNotNull(process.env.FINALITY_CONFIRMATION, 'FINALITY_CONFIRMATION is not set')))
   .setBlockRange({
     from: parseInt(assertNotNull(process.env.START_BLOCK, 'START_BLOCK is not set')),
     to: process.env.END_BLOCK ? parseInt(process.env.END_BLOCK) : undefined
