@@ -27,7 +27,7 @@ jobs:
           ANVIL_IP_ADDR: "0.0.0.0"
         options: >-
           --workdir /anvil
-          anvil
+          --entrypoint anvil
         ports:
           - "8545:8545"
     steps:
