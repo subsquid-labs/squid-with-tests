@@ -23,12 +23,13 @@ jobs:
           - 23798:5432
       anvil:
         image: ghcr.io/foundry-rs/foundry
-        environment:
+        env:
           ANVIL_IP_ADDR: "0.0.0.0"
-        working_dir: /anvil
+        options: >-
+          --workdir /anvil
+          anvil
         ports:
           - "8545:8545"
-        command: anvil
     steps:
 #      - name: cancel previous runs
 #        uses: styfle/cancel-workflow-action@0.5.0
