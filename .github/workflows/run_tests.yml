@@ -5,9 +5,8 @@ on:
     branches:
       - master
 #    paths:
-#			- **
 #      - .github/workflows/run_tests.yml
-#      - packages/core/**
+#      - /**
   workflow_dispatch:
 jobs:
   setup-build-publish-deploy:
@@ -35,7 +34,3 @@ jobs:
 
       - name: Run tests
         run: npm test
-#        env:
-#          TEST_CLICKHOUSE_URL: http://localhost:10123
-#          TEST_CLICKHOUSE_USERNAME: default
-#          TEST_CLICKHOUSE_PASSWORD:
