@@ -44,6 +44,7 @@ processor.run(db, async (ctx) => {
     // We'll go through the logs, sort and decode them, then pass them to
     // handler functions.
     for (let log of block.logs) {
+      console.log(`Log`, log)
       if (log.address === CONTRACT_ADDRESS &&
           log.topics[0] === erc20abi.events.Transfer.topic) {
         // SQD's very own EVM codec at work - about 20 times faster than ethers

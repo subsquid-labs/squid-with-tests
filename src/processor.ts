@@ -21,6 +21,8 @@ export const CONTRACT_ADDRESS = assertNotNull(
   'CONTRACT_ADDRESS is not set'
 )
 
+console.log(CONTRACT_ADDRESS)
+
 // First we configure data retrieval.
 const processorBillet = new EvmBatchProcessor()
   // The processor needs to know how many newest blocks it should mark as "hot".

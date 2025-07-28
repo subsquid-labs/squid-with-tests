@@ -2,14 +2,17 @@ import { spawn, ChildProcess } from 'child_process'
 import { Pool } from 'pg'
 import { setupTestDatabase } from './testing/testDatabase'
 import { restoreStandardState, sendAnvilTransaction, callAnvilReadOnly, ethToWei, getCurrentBlockNumber, waitForBlock } from './testing/forge/anvil'
-import { participants } from './testing/forge/constants'
+import {
+  participants,
+  CONTRACT_ADDRESS as ANVIL_CONTRACT_ADDRESS
+} from './testing/forge/constants'
 
 // Configuration
 const ANVIL_RPC_URL = process.env.ANVIL_RPC_URL || 'http://localhost:8545'
 const DB_PORT = process.env.DB_PORT ? parseInt(process.env.DB_PORT) : 5432
 const DB_USER = process.env.DB_USER || 'postgres'
 const DB_PASS = process.env.DB_PASS || 'postgres'
-const CONTRACT_ADDRESS = process.env.CONTRACT_ADDRESS || '0x5FbDB2315678afecb367f032d93F642f64180aa3'
+const CONTRACT_ADDRESS = ANVIL_CONTRACT_ADDRESS.toLowerCase()
 
 // Helper function to run the indexer as a child process
 function runIndexer(dbName: string, toBlock: number): ChildProcess {
@@ -142,7 +145,7 @@ describe('Anvil Integration Test', () => {
       .getRawOne()
     
     console.log(`Total accounts indexed: ${accountCount.count}`)
-    expect(parseInt(accountCount.count)).toBeGreaterThan(0)
+    expect(parseInt(accountCount.count)).toBe(3) // Alice, Bob, 0x0
 
     // Check that transfers were indexed
     const transferCount = await testDb.dataSource
@@ -152,7 +155,7 @@ describe('Anvil Integration Test', () => {
       .getRawOne()
     
     console.log(`Total transfers indexed: ${transferCount.count}`)
-    expect(parseInt(transferCount.count)).toBeGreaterThan(0)
+    expect(parseInt(transferCount.count)).toBe(2)
 
     // Verify specific transfers
     const transfers = await testDb.dataSource

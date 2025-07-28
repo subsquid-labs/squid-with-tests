@@ -246,17 +246,36 @@ export async function waitForBlock(blockNumber: number, timeoutMs: number = 3000
   throw new Error(`Timeout waiting for block ${blockNumber}`)
 }
 
-// Helper function to convert ETH to Wei
 export function ethToWei(eth: string): bigint {
   return ethers.parseEther(eth)
 }
 
-// Helper function to convert Wei to ETH
 export function weiToEth(wei: bigint): string {
   return ethers.formatEther(wei)
 }
 
-// Load Anvil state without arguments (uses default state file)
+// Reset Anvil
+export async function resetAnvil(): Promise<void> {
+  try {
+    const response = await axios.post(RPC_URL, {
+      jsonrpc: '2.0',
+      method: 'anvil_reset',
+      params: [],
+      id: 1
+    })
+    
+    if (response.data.error) {
+      throw new Error(`RPC Error: ${response.data.error.message}`)
+    }
+    
+    console.log('Anvil reset success')
+  } catch (error) {
+    console.error('Failed to reset Anvil:', error)
+    throw error
+  }
+}
+
+// Load Anvil state
 export async function loadAnvilState(hexState: string): Promise<void> {
   try {
     const response = await axios.post(RPC_URL, {
@@ -275,8 +294,10 @@ export async function loadAnvilState(hexState: string): Promise<void> {
     console.error('Failed to load Anvil state:', error)
     throw error
   }
-} 
+}
 
+// Use the standard state from state.ts with one deployed ERC20 contract
 export async function restoreStandardState(): Promise<void> {
+	await resetAnvil()
   await loadAnvilState(hexState)
 }
