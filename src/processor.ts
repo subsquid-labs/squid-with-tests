@@ -16,20 +16,18 @@ import {
 import * as erc20abi from './abi/erc20'
 import {assertNotNull} from '@subsquid/util-internal'
 
-export const CONTRACT_ADDRESS = assertNotNull(
-  process.env.CONTRACT_ADDRESS,
-  'CONTRACT_ADDRESS is not set'
-)
+// Contract addresses should be lowercased to match the format
+// used in the processor data - see the "if (log.address === ...
+// filter in main.ts
+export const CONTRACT_ADDRESS =
+  '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48'.toLowerCase()
 
 // First we configure data retrieval.
 export const processor = new EvmBatchProcessor()
   // SQD Network gateways are the primary source of blockchain data in
   // squids, providing pre-filtered data in chunks of roughly 1-10k blocks.
   // Set this for a fast sync.
-  .setGateway(assertNotNull(
-    process.env.ETHEREUM_SQD_GATEWAY,
-    'ETHEREUM_SQD_GATEWAY is not set'
-  ))
+  .setGateway('https://v2.archive.subsquid.io/network/ethereum-mainnet')
   // Another data source squid processors can use is chain RPC.
   // In this particular squid it is used to retrieve the very latest chain data
   // (including unfinalized blocks) in real time. It can also be used to
@@ -44,10 +42,6 @@ export const processor = new EvmBatchProcessor()
   // database made due to orphaned blocks, then re-run the processing for the
   // main chain blocks.
   .setFinalityConfirmation(75)
-  .setBlockRange({
-    from: parseInt(assertNotNull(process.env.START_BLOCK, 'START_BLOCK is not set')),
-    to: process.env.END_BLOCK ? parseInt(process.env.END_BLOCK) : undefined
-  })
   // .addXXX() methods request data items. In this case we're asking for
   // Transfer(address,address,uint256) event logs emitted by the USDC contract.
   //
@@ -59,7 +53,8 @@ export const processor = new EvmBatchProcessor()
   // Other .addXXX() methods (.addTransaction(), .addTrace(), .addStateDiff()
   // on EVM) are similarly feature-rich.
   .addLog({
-    address: [CONTRACT_ADDRESS],
+    range: { from: 6082465 }, // also possible to .setBlockRange() processor-wide
+    address: ['0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48'],
     topic0: [erc20abi.events.Transfer.topic],
   })
   // .setFields() is for choosing data fields for the selected data items.

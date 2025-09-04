@@ -1,7 +1,7 @@
 manifestVersion: subsquid.io/v0.1
 name: squid-with-tests
 version: 1
-description: The very first evm squid from manifest
+description: A squid that indexes ERC20 transfers and has a test
 build: 
 deploy:
   addons:
@@ -9,6 +9,8 @@ deploy:
     rpc:
       - eth.http
   processor:
+    env:
+      ETHEREUM_RPC: ${{ addons.rpc.eth.http }}
     cmd:
       - sqd
       - process:prod
