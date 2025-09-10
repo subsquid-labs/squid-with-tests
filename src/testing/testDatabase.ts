@@ -24,6 +24,9 @@ export const PG_CONFIG = {
 export async function setupTestDatabase() : Promise<TestDatabase> {
   const cwd = process.cwd()
 
+	console.log(`CWD is "${cwd}"`)
+	console.log(`__dirname is "${__dirname}"`)
+
   const dbName = randomDbName()
   const pool = new Pool({ ...PG_CONFIG, database: 'postgres' })
   await pool.query(`CREATE DATABASE "${dbName}"`)
