@@ -1,5 +1,6 @@
 import { Pool } from 'pg'
 import { DataSource } from 'typeorm'
+import { createOrmConfig } from '@subsquid/typeorm-config'
 
 // Helper to generate a random DB name
 export function randomDbName() {
@@ -27,6 +28,9 @@ export async function setupTestDatabase() : Promise<{
   const testPool = new Pool({ ...PG_CONFIG, database: dbName })
   await testPool.end()
 
+  // Getting some values from typeorm-store's default TypeORM config to match the behavior
+  const defaultConfig = createOrmConfig({projectDir: __dirname + '/../../'})
+
   // Set up TypeORM DataSource
   const dataSource = new DataSource({
     type: 'postgres',
@@ -39,6 +43,7 @@ export async function setupTestDatabase() : Promise<{
     migrations: [__dirname + '/../../db/migrations/*.js'],
     synchronize: false,
     logging: false,
+    namingStrategy: defaultConfig.namingStrategy
   })
   await dataSource.initialize()
   await dataSource.runMigrations()
@@ -50,4 +55,4 @@ export async function setupTestDatabase() : Promise<{
   }
 
   return { dataSource, cleanup, dbName }
-} 
+}
